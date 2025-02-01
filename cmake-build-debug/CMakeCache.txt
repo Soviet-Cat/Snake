@@ -245,6 +245,9 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//Path to a library.
+SDL2_LIBRARY:FILEPATH=E:/GitHub/Snake/libs/SDL2/lib/libSDL2.dll.a
+
 //Value Computed by CMake
 Snake_BINARY_DIR:STATIC=E:/GitHub/Snake/cmake-build-debug
 
