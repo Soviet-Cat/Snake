@@ -2,15 +2,27 @@
 #include <windows.h>
 #include <vector>
 #include <map>
+#include <memory>
 #include "libs/SDL2/include/SDL.h"
+
+struct TextureDeleter {
+    void operator()(SDL_Texture* texture) const
+    {
+        if (texture) {
+            SDL_DestroyTexture(texture);
+        }
+    }
+};
 
 constexpr int WINDOW_WIDTH = 640;
 constexpr int WINDOW_HEIGHT = 480;
 
-struct Coordinate
+constexpr int GAME_SPEED = 80;
+
+struct Coordinate final
 {
-    Coordinate(int x, int y) : x(x), y(y) {}
-    virtual ~Coordinate() = default;
+    Coordinate(const int x, const int y) : x(x), y(y) {}
+    ~Coordinate() = default;
     int x;
     int y;
 };
@@ -21,18 +33,63 @@ const auto VERTICAL_TILE_COUNT = WINDOW_HEIGHT / TILE_SIZE.y;
 
 struct Snake
 {
-    Coordinate direction{0, 0};
+    Coordinate direction{0, -1};
     std::vector<Coordinate> tiles{Coordinate(HORIZONTAL_TILE_COUNT / 2, VERTICAL_TILE_COUNT / 2)};
-    std::map<int, SDL_Color> colors{};
+    SDL_Texture* head_texture{};
+    SDL_Texture* tail_texture{};
+    std::map<int, std::unique_ptr<SDL_Texture, TextureDeleter>> textures;
+    Uint32 last_update = 0;
 };
 
-void render_snake_tile(SDL_Renderer* renderer, const Coordinate& tile, const SDL_Color color)
+SDL_Texture* create_tile_texture(SDL_Renderer* renderer, const SDL_Color color)
 {
     SDL_Surface* surface = SDL_CreateRGBSurface(0, TILE_SIZE.x, TILE_SIZE.y, 32, 0, 0, 0, 0);
     const Uint32 uint_color = SDL_MapRGB(surface->format, color.r, color.g, color.b);
     SDL_FillRect(surface, nullptr, uint_color);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
+    return texture;
+};
+
+void update_snake_tiles(Snake& snake)
+{
+    const Uint32 current_time = SDL_GetTicks();
+    if (current_time - snake.last_update > GAME_SPEED)
+    {
+        for (int i = 0; i < snake.tiles.size(); i++)
+        {
+            snake.tiles[i].x += snake.direction.x;
+            snake.tiles[i].y += snake.direction.y;
+            if (snake.tiles[i].y > VERTICAL_TILE_COUNT)
+            {
+                snake.tiles[i].y = 0;
+            }
+            if (snake.tiles[i].y < 0)
+            {
+                snake.tiles[i].y = VERTICAL_TILE_COUNT;
+            }
+            if (snake.tiles[i].x > HORIZONTAL_TILE_COUNT)
+            {
+                snake.tiles[i].x = 0;
+            }
+            if (snake.tiles[i].x < 0)
+            {
+                snake.tiles[i].x = HORIZONTAL_TILE_COUNT;
+            }
+        }
+        snake.last_update = SDL_GetTicks();
+    }
+}
+
+struct Fruit
+{
+    Fruit(const Coordinate& position, const SDL_Color color) : position(position), color(color) {}
+    Coordinate position;
+    SDL_Color color;
+};
+
+void render_tile(SDL_Renderer* renderer, const Coordinate& tile, SDL_Texture* texture)
+{
     const SDL_Rect destination = {tile.x * TILE_SIZE.x, tile.y * TILE_SIZE.y, TILE_SIZE.x, TILE_SIZE.y};
     SDL_RenderCopy(renderer, texture, nullptr, &destination);
 }
@@ -52,8 +109,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     // setup renderer
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
+    // setup snake
     Snake snake;
-    snake.colors[0] = SDL_Color{255, 255, 255};
+    snake.head_texture = create_tile_texture(renderer, SDL_Color{255, 0, 0});
+    snake.tail_texture = create_tile_texture(renderer, SDL_Color{0, 0, 255});
+
+    // generate snake head and tail
+    snake.textures[0] = std::unique_ptr<SDL_Texture, TextureDeleter>(snake.head_texture);
+    for (int i = 1; i < 5; i++)
+    {
+        snake.tiles.emplace_back(snake.tiles[snake.tiles.size() - 1].x + 0, snake.tiles[snake.tiles.size() - 1].y + 1);
+        snake.textures[i] = std::unique_ptr<SDL_Texture, TextureDeleter>(snake.tail_texture);
+    }
 
     bool running = true;
     SDL_Event event;
@@ -69,13 +136,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             }
         }
 
+        // update snake
+        update_snake_tiles(snake);
+
         // prepare for rendering
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
         // render snake
         for (int i = 0; i < snake.tiles.size(); ++i)
-            render_snake_tile(renderer, snake.tiles[i], snake.colors[i]);
+        {
+            render_tile(renderer, snake.tiles[i], snake.textures[i].get());
+        }
 
         // update window
         SDL_RenderPresent(renderer);
