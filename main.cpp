@@ -80,6 +80,7 @@ void reset_snake(Snake& snake, SDL_Renderer* renderer)
 {
     SDL_Delay(1000);
     snake = Snake();
+    snake.direction = Coordinate(0, -1);
     snake.head_texture = create_tile_texture(renderer, SDL_Color{255, 0, 0});
     snake.tail_texture = create_tile_texture(renderer, SDL_Color{0, 0, 255});
     snake.textures[0] = std::unique_ptr<SDL_Texture, TextureDeleter>(snake.head_texture);
@@ -179,7 +180,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     std::vector<std::unique_ptr<Fruit>> fruits;
     std::map<int, std::unique_ptr<SDL_Texture, TextureDeleter>> fruit_textures;
     fruit_textures[0] = std::unique_ptr<SDL_Texture, TextureDeleter>(create_tile_texture(renderer, SDL_Color{150, 150, 150}));
-    int max_fruits = 8;
+    int max_fruits = 12;
     for (int j = 0; j < max_fruits; j++)
     {
         fruits.push_back(std::unique_ptr<Fruit>(new Fruit(Coordinate(random_int(0, HORIZONTAL_TILE_COUNT), random_int(0, VERTICAL_TILE_COUNT)), 0)));
@@ -189,7 +190,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     SDL_Event event;
     Coordinate temp_direction{0, -1};
     // main loop
-    SDL_Delay(1000);
     while (running)
     {
         // events
