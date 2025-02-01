@@ -17,7 +17,7 @@ struct TextureDeleter {
 constexpr int WINDOW_WIDTH = 640;
 constexpr int WINDOW_HEIGHT = 480;
 
-constexpr int GAME_SPEED = 80;
+constexpr int GAME_SPEED = 70;
 
 struct Coordinate final
 {
@@ -58,8 +58,17 @@ void update_snake_tiles(Snake& snake)
     {
         for (int i = 0; i < snake.tiles.size(); i++)
         {
-            snake.tiles[i].x += snake.direction.x;
-            snake.tiles[i].y += snake.direction.y;
+            int current_index = (snake.tiles.size() - i) - 1;
+            if (current_index != 0)
+            {
+                snake.tiles[current_index].x = snake.tiles[current_index - 1].x;
+                snake.tiles[current_index].y = snake.tiles[current_index - 1].y;
+            } else
+            {
+                snake.tiles[current_index].x += snake.direction.x;
+                snake.tiles[current_index].y += snake.direction.y;
+            }
+
             if (snake.tiles[i].y > VERTICAL_TILE_COUNT)
             {
                 snake.tiles[i].y = 0;
@@ -79,6 +88,14 @@ void update_snake_tiles(Snake& snake)
         }
         snake.last_update = SDL_GetTicks();
     }
+}
+
+void consume_fruit(Snake& snake)
+{
+    int max_index = snake.tiles.size() - 1;
+    Coordinate difference {snake.tiles[max_index].x - snake.tiles[max_index - 1].x, snake.tiles[max_index].y - snake.tiles[max_index - 1].y};
+    snake.tiles.emplace_back(snake.tiles[max_index].x + difference.x, snake.tiles[max_index].y + difference.y);
+    snake.textures[snake.tiles.size() - 1] = std::unique_ptr<SDL_Texture, TextureDeleter>(snake.tail_texture);
 }
 
 struct Fruit
@@ -124,6 +141,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     bool running = true;
     SDL_Event event;
+    Coordinate temp_direction{0, -1};
     // main loop
     while (running)
     {
@@ -133,7 +151,33 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             if (event.type == SDL_QUIT)
             {
                 running = false;
+            } else if (event.type == SDL_KEYDOWN)
+            {
+                if (event.key.keysym.sym == SDLK_UP && snake.direction.y != 1)
+                {
+                    temp_direction.x = 0;
+                    temp_direction.y = -1;
+                }
+                else if (event.key.keysym.sym == SDLK_DOWN && snake.direction.y != -1)
+                {
+                    temp_direction.x = 0;
+                    temp_direction.y = 1;
+                }
+                else if (event.key.keysym.sym == SDLK_LEFT && snake.direction.x != 1)
+                {
+                    temp_direction.x = -1;
+                    temp_direction.y = 0;
+                }
+                else if (event.key.keysym.sym == SDLK_RIGHT && snake.direction.x != -1)
+                {
+                    temp_direction.x = 1;
+                    temp_direction.y = 0;
+                }
             }
+        }
+        if (SDL_GetTicks() - snake.last_update > GAME_SPEED)
+        {
+            snake.direction = temp_direction;
         }
 
         // update snake
