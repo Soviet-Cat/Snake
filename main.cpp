@@ -23,10 +23,10 @@ struct TextureDeleter {
     }
 };
 
-constexpr int WINDOW_WIDTH = 640;
-constexpr int WINDOW_HEIGHT = 480;
+constexpr int WINDOW_WIDTH = 1280;
+constexpr int WINDOW_HEIGHT = 720;
 
-constexpr int GAME_SPEED = 70;
+constexpr int GAME_SPEED = 90;
 
 struct Coordinate final
 {
@@ -36,7 +36,7 @@ struct Coordinate final
     int y;
 };
 
-const auto TILE_SIZE = Coordinate(20, 20);
+const auto TILE_SIZE = Coordinate(10, 10);
 const auto HORIZONTAL_TILE_COUNT = WINDOW_WIDTH / TILE_SIZE.x;
 const auto VERTICAL_TILE_COUNT = WINDOW_HEIGHT / TILE_SIZE.y;
 
@@ -156,7 +156,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     SDL_Window* window = SDL_CreateWindow(
         "Snake",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        640, 480,
+        WINDOW_WIDTH, WINDOW_HEIGHT,
         SDL_WINDOW_SHOWN
         );
 
@@ -180,7 +180,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     std::vector<std::unique_ptr<Fruit>> fruits;
     std::map<int, std::unique_ptr<SDL_Texture, TextureDeleter>> fruit_textures;
     fruit_textures[0] = std::unique_ptr<SDL_Texture, TextureDeleter>(create_tile_texture(renderer, SDL_Color{150, 150, 150}));
-    int max_fruits = 12;
+    int max_fruits = 32
+    ;
     for (int j = 0; j < max_fruits; j++)
     {
         fruits.push_back(std::unique_ptr<Fruit>(new Fruit(Coordinate(random_int(0, HORIZONTAL_TILE_COUNT), random_int(0, VERTICAL_TILE_COUNT)), 0)));
@@ -235,13 +236,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         SDL_RenderClear(renderer);
 
         // render snake
-        for (int i = 0; i < snake.tiles.size(); ++i)
-        {
-            render_tile(renderer, snake.tiles[i], snake.textures[i].get());
-        }
         for (int j = 0; j < fruits.size(); j++)
         {
             render_tile(renderer, fruits[j]->position, fruit_textures[fruits[j]->texture].get());
+        }
+        for (int i = 0; i < snake.tiles.size(); ++i)
+        {
+            render_tile(renderer, snake.tiles[i], snake.textures[i].get());
         }
 
         // update window
